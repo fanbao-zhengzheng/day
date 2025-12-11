@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FlowMatrix - Pro Dashboard</title>
+    <title>FlowMatrix - Calendar Edition</title>
 
     <!-- 核心依赖 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,6 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/zh-cn.min.js"></script>
+    <!-- 引入 IsBetween 插件用于日历计算 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/plugin/isBetween.min.js"></script>
 
     <!-- 字体 -->
     <link
@@ -69,7 +71,7 @@
         }
         50% {
           box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
-          transform: scale(1.01);
+          transform: scale(1.005);
         }
       }
       .focus-active {
@@ -103,6 +105,56 @@
       .stat-card-week {
         background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
       }
+
+      /* 日历样式 */
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+      }
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        font-size: 0.9rem;
+      }
+      .calendar-day:hover {
+        background-color: #f1f5f9;
+      }
+      .calendar-day.is-selected {
+        background-color: #1e293b;
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      .calendar-day.is-today {
+        border: 2px solid #6366f1;
+        color: #6366f1;
+        font-weight: bold;
+      }
+      .calendar-day.is-today.is-selected {
+        color: white;
+        border-color: #1e293b;
+      }
+      .calendar-day.other-month {
+        opacity: 0.3;
+      }
+      .has-task-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: #10b981;
+        margin-top: 2px;
+      }
+      .is-selected .has-task-dot {
+        background-color: #4ade80;
+      }
     </style>
   </head>
   <body
@@ -115,11 +167,11 @@
       id="app"
       class="relative z-10 h-full flex flex-col max-w-7xl mx-auto w-full shadow-2xl bg-white/40 sm:border-x border-white/50"
     >
-      <!-- ================= HEADER: 时间与控制区 ================= -->
+      <!-- ================= HEADER ================= -->
       <header
         class="px-6 py-4 flex justify-between items-center bg-white/60 border-b border-white/50 backdrop-blur-sm"
       >
-        <!-- 左侧 Logo -->
+        <!-- Logo -->
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-xl shadow-lg"
@@ -139,9 +191,9 @@
           </div>
         </div>
 
-        <!-- 右侧功能区 -->
+        <!-- Controls -->
         <div class="flex items-center gap-6">
-          <!-- 时间 UI -->
+          <!-- Clock -->
           <div class="hidden sm:flex flex-col items-end mr-2">
             <span
               class="font-mono text-2xl font-bold text-slate-700 leading-none tracking-tight"
@@ -153,7 +205,7 @@
             >
           </div>
 
-          <!-- 统计按钮 -->
+          <!-- Stats Button -->
           <button
             @click="showStats = true"
             class="group relative p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
@@ -172,18 +224,17 @@
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
               ></path>
             </svg>
-            <!-- 小红点提示 -->
             <span
               v-if="todayStats.count > 0"
               class="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full ring-2 ring-white"
             ></span>
           </button>
 
-          <!-- 历史按钮 -->
+          <!-- Calendar Button (Replaces History) -->
           <button
-            @click="showHistory = !showHistory"
+            @click="openCalendar"
             class="p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
-            title="历史记录"
+            title="日历记录"
           >
             <svg
               class="w-6 h-6"
@@ -195,12 +246,12 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               ></path>
             </svg>
           </button>
 
-          <!-- 状态指示灯 -->
+          <!-- Status Dot -->
           <div
             class="w-2.5 h-2.5 rounded-full ring-2 ring-white/50"
             :class="loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'"
@@ -212,7 +263,7 @@
       <main
         class="flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-6 relative"
       >
-        <!-- SECTION 1: 专注舞台 (Focus Stage) -->
+        <!-- Focus Stage -->
         <section
           class="flex-none transition-all duration-500 ease-in-out"
           :class="basketTask ? 'min-h-[220px]' : 'h-28'"
@@ -221,12 +272,10 @@
             class="w-full h-full rounded-3xl glass-panel shadow-lg overflow-hidden relative flex flex-col items-center justify-center p-6 transition-all"
             :class="basketTask ? 'focus-active bg-white/90' : 'bg-white/40 border-dashed border-2 border-indigo-200/50 hover:border-indigo-300'"
           >
-            <!-- 篮子有任务 -->
             <div
               v-if="basketTask"
               class="w-full max-w-4xl flex flex-col items-center text-center z-10 animate-fade-in relative"
             >
-              <!-- 顶部小标签 -->
               <div
                 class="absolute top-[-10px] right-0 sm:right-auto flex gap-2"
               >
@@ -239,8 +288,8 @@
               <div
                 class="flex flex-col sm:flex-row items-center gap-4 sm:gap-12 w-full justify-center"
               >
-                <!-- 左侧：计时器 -->
                 <div class="text-center">
+                  <!-- 大号计时器 -->
                   <div
                     class="font-mono text-5xl sm:text-7xl font-bold text-slate-800 tracking-tighter tabular-nums drop-shadow-sm"
                   >
@@ -253,7 +302,6 @@
                   </div>
                 </div>
 
-                <!-- 中间：任务详情 -->
                 <div class="flex-1 min-w-0 max-w-xl text-center sm:text-left">
                   <div
                     class="flex items-center justify-center sm:justify-start gap-2 mb-2"
@@ -284,7 +332,6 @@
                 </div>
               </div>
 
-              <!-- 底部按钮 -->
               <div
                 class="flex gap-3 mt-6 sm:mt-0 sm:absolute sm:bottom-0 sm:right-0"
               >
@@ -329,7 +376,6 @@
               </div>
             </div>
 
-            <!-- 篮子为空 -->
             <div v-else class="flex items-center gap-4 text-slate-400">
               <div class="p-3 bg-white/50 rounded-full">
                 <svg
@@ -362,7 +408,7 @@
           </div>
         </section>
 
-        <!-- SECTION 2: 四象限矩阵 -->
+        <!-- Matrix -->
         <section
           class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto pr-1 pb-2"
         >
@@ -372,7 +418,6 @@
             class="flex flex-col rounded-2xl border shadow-sm h-full min-h-[200px]"
             :class="q.bgClass"
           >
-            <!-- 象限头 -->
             <div
               class="px-4 py-3 border-b border-black/5 flex justify-between items-center bg-white/40 backdrop-blur-sm rounded-t-2xl sticky top-0 z-10"
             >
@@ -401,8 +446,6 @@
                 </svg>
               </button>
             </div>
-
-            <!-- 任务列表 -->
             <div class="flex-1 p-3 overflow-y-auto space-y-2">
               <div
                 v-for="task in getTasksByQuadrant(q.id)"
@@ -410,11 +453,9 @@
                 @click="moveToBasket(task)"
                 class="bg-white p-3 rounded-xl shadow-sm border border-black/5 cursor-pointer group hover:scale-[1.01] transition-transform relative"
               >
-                <!-- 删除按钮 (Hover显示) -->
                 <button
                   @click.stop="deleteTask(task.id)"
                   class="absolute top-2 right-2 p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-20"
-                  title="删除任务"
                 >
                   <svg
                     class="w-3.5 h-3.5"
@@ -430,7 +471,6 @@
                     ></path>
                   </svg>
                 </button>
-
                 <div v-if="task.tags" class="flex flex-wrap gap-1 mb-1.5">
                   <span
                     v-for="tag in task.tags.split(',')"
@@ -439,13 +479,11 @@
                     >{{ tag.trim() }}</span
                   >
                 </div>
-
                 <div
                   class="font-medium text-slate-700 text-sm pr-6 leading-snug"
                 >
                   {{ task.title }}
                 </div>
-
                 <div
                   class="mt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-50 pt-2"
                 >
@@ -493,6 +531,193 @@
 
       <!-- ================= MODALS ================= -->
 
+      <!-- 日历 Modal -->
+      <div
+        v-if="showCalendar"
+        class="fixed inset-0 z-[75] flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
+          @click="showCalendar = false"
+        ></div>
+        <div
+          class="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[85vh] animate-fade-in"
+        >
+          <!-- Calendar Header -->
+          <div
+            class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50"
+          >
+            <div>
+              <h2 class="text-xl font-bold text-slate-800">成就日历</h2>
+              <p class="text-xs text-slate-500 font-medium">查看过往的辉煌</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <button
+                @click="changeMonth(-1)"
+                class="p-1 hover:bg-slate-200 rounded text-slate-500"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  ></path>
+                </svg>
+              </button>
+              <span class="text-sm font-bold text-slate-700 w-24 text-center"
+                >{{ calendarTitle }}</span
+              >
+              <button
+                @click="changeMonth(1)"
+                class="p-1 hover:bg-slate-200 rounded text-slate-500"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar Grid -->
+          <div class="p-6">
+            <!-- Weekdays -->
+            <div class="grid grid-cols-7 gap-4 mb-2 text-center">
+              <div
+                v-for="d in ['日','一','二','三','四','五','六']"
+                class="text-xs font-bold text-slate-400"
+              >
+                {{ d }}
+              </div>
+            </div>
+            <!-- Days -->
+            <div class="calendar-grid">
+              <div
+                v-for="day in calendarDays"
+                :key="day.dateStr"
+                @click="selectDate(day)"
+                class="calendar-day"
+                :class="{
+                                 'other-month': !day.isCurrentMonth,
+                                 'is-today': day.isToday,
+                                 'is-selected': day.isSelected
+                             }"
+              >
+                <span>{{ day.dayNum }}</span>
+                <div v-if="day.hasTask" class="has-task-dot"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Day Details -->
+          <div
+            class="flex-1 bg-slate-50 border-t border-slate-100 p-6 overflow-y-auto"
+          >
+            <h3
+              class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4 text-indigo-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                ></path>
+              </svg>
+              {{ selectedDateFormatted }} 的记录
+            </h3>
+
+            <div v-if="selectedDateTasks.length > 0" class="space-y-3">
+              <div
+                v-for="task in selectedDateTasks"
+                :key="task.id"
+                class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center group"
+              >
+                <div class="flex-1 min-w-0 pr-2">
+                  <div
+                    class="text-sm font-medium text-slate-700 truncate line-through decoration-slate-300"
+                  >
+                    {{ task.title }}
+                  </div>
+                  <div class="flex gap-2 mt-1">
+                    <span
+                      class="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-mono font-bold"
+                      >{{ formatDuration(task.duration_seconds) }}</span
+                    >
+                    <span
+                      v-if="task.quadrant"
+                      class="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded"
+                      >Q{{ task.quadrant }}</span
+                    >
+                  </div>
+                </div>
+                <button
+                  @click="deleteTask(task.id)"
+                  class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div v-else class="text-center py-8 text-slate-400 text-sm italic">
+              这天没有完成任何任务
+            </div>
+          </div>
+
+          <!-- Close Button -->
+          <button
+            @click="showCalendar = false"
+            class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- 统计面板 Modal -->
       <div
         v-if="showStats"
@@ -535,9 +760,7 @@
               </svg>
             </button>
           </div>
-
           <div class="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 今日统计 -->
             <div
               class="stat-card-today rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 relative overflow-hidden group"
             >
@@ -569,8 +792,6 @@
                 <span>✅ 完成 {{ todayStats.count }} 个任务</span>
               </div>
             </div>
-
-            <!-- 本周统计 -->
             <div
               class="stat-card-week rounded-2xl p-6 text-slate-800 shadow-lg shadow-sky-100 relative overflow-hidden group"
             >
@@ -601,77 +822,10 @@
               </div>
             </div>
           </div>
-
-          <div class="px-8 pb-8 text-center text-xs text-slate-400">
-            *
-            统计数据基于已完成（Done）状态的任务计算。保持专注，让每一分钟都有价值。
-          </div>
         </div>
       </div>
 
-      <!-- 历史侧滑栏 -->
-      <div v-if="showHistory" class="fixed inset-0 z-[60] flex justify-end">
-        <div
-          class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
-          @click="showHistory = false"
-        ></div>
-        <div
-          class="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right"
-        >
-          <div
-            class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50"
-          >
-            <h2 class="font-bold text-lg text-slate-800">完成历史</h2>
-            <button
-              @click="showHistory = false"
-              class="text-slate-400 hover:text-slate-600"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="flex-1 overflow-y-auto p-6 space-y-8 bg-white">
-            <div v-for="(group, date) in groupedCompletedTasks" :key="date">
-              <div class="flex items-center gap-2 mb-3">
-                <span class="h-px flex-1 bg-slate-100"></span>
-                <span
-                  class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                  >{{ date }}</span
-                >
-                <span class="h-px flex-1 bg-slate-100"></span>
-              </div>
-              <div class="space-y-3">
-                <div
-                  v-for="task in group"
-                  :key="task.id"
-                  class="flex justify-between items-start group"
-                >
-                  <div class="flex-1">
-                    <div
-                      class="text-sm text-slate-600 line-through decoration-slate-300"
-                    >
-                      {{ task.title }}
-                    </div>
-                    <div class="flex gap-2 mt-1">
-                      <span
-                        class="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-mono"
-                        >{{ formatDuration(task.duration_seconds) }}</span
-                      >
-                    </div>
-                  </div>
-                  <button
-                    @click="deleteTask(task.id)"
-                    class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 新建任务 Modal -->
+      <!-- Add Modal -->
       <div
         v-if="showModal"
         class="fixed inset-0 z-[80] flex items-center justify-center p-4"
@@ -772,7 +926,8 @@
 
     <script>
       const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
-      dayjs.locale("zh-cn"); // 设置中文
+      dayjs.extend(dayjs_plugin_isBetween);
+      dayjs.locale("zh-cn");
 
       // ===========================================
       // TODO: 配置 Supabase
@@ -789,8 +944,8 @@
           const tasks = ref([]);
           const loading = ref(false);
           const showModal = ref(false);
-          const showHistory = ref(false);
           const showStats = ref(false);
+          const showCalendar = ref(false);
           const newTask = ref({
             title: "",
             description: "",
@@ -799,6 +954,10 @@
           });
           const now = ref(dayjs());
           let timerInterval;
+
+          // Calendar State
+          const currentCalendarDate = ref(dayjs()); // Month navigator
+          const selectedDate = ref(dayjs()); // Selected day for details
 
           const quadrants = [
             { id: 1, name: "重要且紧急", bgClass: "q1-bg", icon: "🔥" },
@@ -815,7 +974,6 @@
           });
           onUnmounted(() => clearInterval(timerInterval));
 
-          // 获取任务
           const fetchTasks = async () => {
             loading.value = true;
             const { data } = await client
@@ -826,7 +984,7 @@
             loading.value = false;
           };
 
-          // 计算属性
+          // Timer & Display
           const timeDisplay = computed(() => ({
             time: now.value.format("HH:mm:ss"),
             date: now.value.format("YYYY-MM-DD"),
@@ -850,11 +1008,10 @@
             );
           });
 
-          // 统计逻辑
+          // Stats
           const completedTasks = computed(() =>
             tasks.value.filter((t) => t.status === "done")
           );
-
           const todayStats = computed(() => {
             const today = completedTasks.value.filter((t) =>
               dayjs(t.completed_at).isSame(dayjs(), "day")
@@ -865,9 +1022,7 @@
             );
             return { count: today.length, duration: duration };
           });
-
           const weekStats = computed(() => {
-            // dayjs 默认周日为第一天，这里简化逻辑，只要是本周即可
             const startOfWeek = dayjs().startOf("week");
             const week = completedTasks.value.filter((t) =>
               dayjs(t.completed_at).isAfter(startOfWeek)
@@ -879,28 +1034,77 @@
             return { count: week.length, duration: duration };
           });
 
-          const groupedCompletedTasks = computed(() => {
-            const sorted = [...completedTasks.value].sort(
-              (a, b) => new Date(b.completed_at) - new Date(a.completed_at)
-            );
-            const groups = {};
-            sorted.forEach((task) => {
-              const dateStr = dayjs(task.completed_at).format("YYYY-MM-DD");
-              const label =
-                dateStr === dayjs().format("YYYY-MM-DD") ? "今天" : dateStr;
-              if (!groups[label]) groups[label] = [];
-              groups[label].push(task);
-            });
-            return groups;
+          // Calendar Logic
+          const calendarTitle = computed(() =>
+            currentCalendarDate.value.format("YYYY年 MM月")
+          );
+
+          const calendarDays = computed(() => {
+            const startOfMonth = currentCalendarDate.value.startOf("month");
+            const startOfGrid = startOfMonth.startOf("week");
+            const days = [];
+
+            // Generate 42 days (6 weeks) to cover any month grid
+            for (let i = 0; i < 42; i++) {
+              const date = startOfGrid.add(i, "day");
+              const dateStr = date.format("YYYY-MM-DD");
+              const hasTask = completedTasks.value.some(
+                (t) => dayjs(t.completed_at).format("YYYY-MM-DD") === dateStr
+              );
+
+              days.push({
+                dateObj: date,
+                dateStr: dateStr,
+                dayNum: date.date(),
+                isCurrentMonth:
+                  date.month() === currentCalendarDate.value.month(),
+                isToday: date.isSame(dayjs(), "day"),
+                isSelected: date.isSame(selectedDate.value, "day"),
+                hasTask: hasTask,
+              });
+            }
+            return days;
           });
 
-          // 辅助函数
+          const changeMonth = (delta) => {
+            currentCalendarDate.value = currentCalendarDate.value.add(
+              delta,
+              "month"
+            );
+          };
+
+          const selectDate = (day) => {
+            selectedDate.value = day.dateObj;
+          };
+
+          const openCalendar = () => {
+            selectedDate.value = dayjs(); // Reset select to today when opening
+            currentCalendarDate.value = dayjs();
+            showCalendar.value = true;
+          };
+
+          const selectedDateFormatted = computed(() =>
+            selectedDate.value.format("MM月DD日")
+          );
+
+          const selectedDateTasks = computed(() => {
+            return completedTasks.value
+              .filter((t) =>
+                dayjs(t.completed_at).isSame(selectedDate.value, "day")
+              )
+              .sort(
+                (a, b) => new Date(b.completed_at) - new Date(a.completed_at)
+              );
+          });
+
+          // Helpers
           const formatDuration = (s) => {
-            if (!s) return "00:00";
+            if (!s) return "00:00:00";
             const h = Math.floor(s / 3600),
               m = Math.floor((s % 3600) / 60),
               sec = s % 60;
-            return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+            // 确保总是显示小时
+            return `${p(h)}:${p(m)}:${p(sec)}`;
           };
           const formatHours = (s) => (s / 3600).toFixed(1);
           const p = (n) => n.toString().padStart(2, "0");
@@ -921,7 +1125,7 @@
               4: "text-slate-500",
             }[id]);
 
-          // 操作逻辑
+          // Actions
           const openAddModal = (q) => {
             newTask.value = {
               title: "",
@@ -1009,16 +1213,22 @@
             tasks,
             loading,
             showModal,
-            showHistory,
             showStats,
+            showCalendar,
             newTask,
             quadrants,
             basketTask,
-            groupedCompletedTasks,
             currentTimerDisplay,
             timeDisplay,
             todayStats,
             weekStats,
+            calendarTitle,
+            calendarDays,
+            changeMonth,
+            selectDate,
+            selectedDateFormatted,
+            selectedDateTasks,
+            openCalendar,
             getTasksByQuadrant,
             openAddModal,
             getQuadrantName,
@@ -1037,17 +1247,6 @@
     </script>
 
     <style>
-      .animate-slide-in-right {
-        animation: slideInRight 0.3s ease-out forwards;
-      }
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-        }
-        to {
-          transform: translateX(0);
-        }
-      }
       .animate-fade-in {
         animation: fadeIn 0.3s ease-out;
       }
