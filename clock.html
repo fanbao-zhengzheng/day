@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowMatrix - Zen Mode</title>
+
+    <!-- 核心依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/zh-cn.min.js"></script>
+
+    <!-- 字体 (保持一致) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --font-main: "Outfit", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+      body {
+        font-family: var(--font-main);
+      }
+
+      /* 动态背景渐变动画 */
+      @keyframes gradient-xy {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+      .animate-gradient {
+        background-size: 200% 200%;
+        animation: gradient-xy 15s ease infinite;
+      }
+
+      /* 呼吸光晕 */
+      @keyframes breathe-slow {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.1);
+        }
+      }
+      .glow-blob {
+        animation: breathe-slow 8s ease-in-out infinite;
+      }
+
+      /* 玻璃拟态 */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body
+    class="h-screen w-full overflow-hidden bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center"
+  >
+    <!-- 多层遮罩，营造深邃感 -->
+    <div class="absolute inset-0 bg-white/70 backdrop-blur-md z-0"></div>
+
+    <!-- 动态光晕背景 (装饰) -->
+    <div
+      class="absolute inset-0 overflow-hidden z-0 flex items-center justify-center pointer-events-none"
+    >
+      <div
+        class="w-[50vw] h-[50vw] bg-indigo-300/30 rounded-full blur-[100px] glow-blob absolute top-[-10%] left-[-10%]"
+      ></div>
+      <div
+        class="w-[40vw] h-[40vw] bg-purple-300/30 rounded-full blur-[100px] glow-blob absolute bottom-[-10%] right-[-10%] animation-delay-2000"
+      ></div>
+    </div>
+
+    <div
+      id="app"
+      class="relative z-10 h-full flex flex-col items-center justify-center p-6"
+    >
+      <!-- 主时钟卡片 -->
+      <div
+        class="glass-panel p-12 sm:p-20 rounded-[3rem] text-center flex flex-col items-center transform transition-all hover:scale-[1.01] duration-500"
+      >
+        <!-- 日期栏 -->
+        <div class="flex items-center gap-4 mb-4 opacity-80">
+          <span
+            class="text-xl sm:text-2xl font-medium text-slate-500 uppercase tracking-[0.2em]"
+            >{{ dateDisplay.day }}</span
+          >
+          <span class="w-px h-6 bg-slate-300"></span>
+          <span
+            class="text-xl sm:text-2xl font-medium text-slate-500 uppercase tracking-[0.2em]"
+            >{{ dateDisplay.date }}</span
+          >
+        </div>
+
+        <!-- 巨大的时间 -->
+        <!-- 使用 text-transparent bg-clip-text 实现文字渐变 -->
+        <div class="relative">
+          <h1
+            class="font-mono text-[18vw] sm:text-[12rem] font-bold leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-700 via-indigo-600 to-purple-600 drop-shadow-sm select-none"
+          >
+            {{ time }}
+          </h1>
+
+          <!-- 秒针指示器 (可选，一个小圆点跳动) -->
+          <div
+            class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-indigo-400 transition-all duration-300"
+              :class="second % 2 === 0 ? 'opacity-100 scale-125' : 'opacity-40'"
+            ></span>
+          </div>
+        </div>
+
+        <!-- 底部标语 -->
+        <div class="mt-12">
+          <p class="text-slate-400 font-light text-lg italic">
+            "Focus on the present, shape the future."
+          </p>
+        </div>
+      </div>
+
+      <!-- 返回按钮 (悬浮在底部) -->
+      <a
+        href="index.html"
+        class="absolute bottom-10 group flex items-center gap-2 px-6 py-3 rounded-full bg-white/50 hover:bg-white border border-white/50 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 text-slate-500 hover:text-indigo-600"
+      >
+        <svg
+          class="w-5 h-5 transition-transform group-hover:-translate-x-1"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          ></path>
+        </svg>
+        <span class="text-sm font-bold tracking-wide">Back to Dashboard</span>
+      </a>
+    </div>
+
+    <script>
+      const { createApp, ref, onMounted, onUnmounted, computed } = Vue;
+      dayjs.locale("zh-cn");
+
+      createApp({
+        setup() {
+          const now = ref(dayjs());
+          let timer;
+
+          const updateTime = () => {
+            now.value = dayjs();
+          };
+
+          onMounted(() => {
+            updateTime();
+            // 为了秒数跳动更精准，使用 requestAnimationFrame 或者简单的 setInterval
+            timer = setInterval(updateTime, 1000);
+          });
+
+          onUnmounted(() => clearInterval(timer));
+
+          const time = computed(() => now.value.format("HH:mm"));
+          // 如果你想显示秒，可以用这个: now.value.format('HH:mm:ss')
+
+          const second = computed(() => now.value.second());
+
+          const dateDisplay = computed(() => ({
+            date: now.value.format("YYYY / MM / DD"),
+            day: now.value.format("dddd"), // 星期几
+          }));
+
+          return { time, second, dateDisplay };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>
