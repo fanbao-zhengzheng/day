@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlowMatrix - Pro Dashboard</title>
+
+    <!-- 核心依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/zh-cn.min.js"></script>
+
+    <!-- 字体 -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- 自定义样式 -->
+    <style>
+      :root {
+        --font-main: "Outfit", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+      body {
+        font-family: var(--font-main);
+        background-color: #f0f4f8;
+        color: #334155;
+      }
+
+      /* 玻璃拟态 */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .gradient-bg {
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      }
+
+      /* 象限色调 */
+      .q1-bg {
+        background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 100%);
+        border-color: #fecdd3;
+      }
+      .q2-bg {
+        background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+        border-color: #bfdbfe;
+      }
+      .q3-bg {
+        background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
+        border-color: #fde68a;
+      }
+      .q4-bg {
+        background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+        border-color: #e2e8f0;
+      }
+
+      /* 动画 */
+      @keyframes breathe {
+        0%,
+        100% {
+          box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+          transform: scale(1.01);
+        }
+      }
+      .focus-active {
+        animation: breathe 3s ease-in-out infinite;
+        border: 2px solid #818cf8;
+      }
+
+      /* 滚动条 */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* 标签 */
+      .tag-badge {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* 统计卡片渐变 */
+      .stat-card-today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      .stat-card-week {
+        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+      }
+    </style>
+  </head>
+  <body
+    class="h-screen flex flex-col overflow-hidden bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center"
+  >
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-white/80 backdrop-blur-md z-0"></div>
+
+    <div
+      id="app"
+      class="relative z-10 h-full flex flex-col max-w-7xl mx-auto w-full shadow-2xl bg-white/40 sm:border-x border-white/50"
+    >
+      <!-- ================= HEADER: 时间与控制区 ================= -->
+      <header
+        class="px-6 py-4 flex justify-between items-center bg-white/60 border-b border-white/50 backdrop-blur-sm"
+      >
+        <!-- 左侧 Logo -->
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-xl shadow-lg"
+          >
+            F
+          </div>
+          <div class="flex flex-col">
+            <h1
+              class="font-bold text-slate-800 text-lg leading-none tracking-tight"
+            >
+              FlowMatrix
+            </h1>
+            <span
+              class="text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-0.5"
+              >Pro Dashboard</span
+            >
+          </div>
+        </div>
+
+        <!-- 右侧功能区 -->
+        <div class="flex items-center gap-6">
+          <!-- 时间 UI -->
+          <div class="hidden sm:flex flex-col items-end mr-2">
+            <span
+              class="font-mono text-2xl font-bold text-slate-700 leading-none tracking-tight"
+              >{{ timeDisplay.time }}</span
+            >
+            <span
+              class="text-xs font-medium text-slate-400 uppercase tracking-wide"
+              >{{ timeDisplay.date }} · {{ timeDisplay.day }}</span
+            >
+          </div>
+
+          <!-- 统计按钮 -->
+          <button
+            @click="showStats = true"
+            class="group relative p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
+            title="查看统计"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              ></path>
+            </svg>
+            <!-- 小红点提示 -->
+            <span
+              v-if="todayStats.count > 0"
+              class="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full ring-2 ring-white"
+            ></span>
+          </button>
+
+          <!-- 历史按钮 -->
+          <button
+            @click="showHistory = !showHistory"
+            class="p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
+            title="历史记录"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+          </button>
+
+          <!-- 状态指示灯 -->
+          <div
+            class="w-2.5 h-2.5 rounded-full ring-2 ring-white/50"
+            :class="loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'"
+          ></div>
+        </div>
+      </header>
+
+      <!-- ================= MAIN CONTENT ================= -->
+      <main
+        class="flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-6 relative"
+      >
+        <!-- SECTION 1: 专注舞台 (Focus Stage) -->
+        <section
+          class="flex-none transition-all duration-500 ease-in-out"
+          :class="basketTask ? 'min-h-[220px]' : 'h-28'"
+        >
+          <div
+            class="w-full h-full rounded-3xl glass-panel shadow-lg overflow-hidden relative flex flex-col items-center justify-center p-6 transition-all"
+            :class="basketTask ? 'focus-active bg-white/90' : 'bg-white/40 border-dashed border-2 border-indigo-200/50 hover:border-indigo-300'"
+          >
+            <!-- 篮子有任务 -->
+            <div
+              v-if="basketTask"
+              class="w-full max-w-4xl flex flex-col items-center text-center z-10 animate-fade-in relative"
+            >
+              <!-- 顶部小标签 -->
+              <div
+                class="absolute top-[-10px] right-0 sm:right-auto flex gap-2"
+              >
+                <span
+                  class="px-2 py-1 rounded text-[10px] font-bold tracking-wider text-white uppercase bg-indigo-500 shadow-sm"
+                  >Focus Mode</span
+                >
+              </div>
+
+              <div
+                class="flex flex-col sm:flex-row items-center gap-4 sm:gap-12 w-full justify-center"
+              >
+                <!-- 左侧：计时器 -->
+                <div class="text-center">
+                  <div
+                    class="font-mono text-5xl sm:text-7xl font-bold text-slate-800 tracking-tighter tabular-nums drop-shadow-sm"
+                  >
+                    {{ currentTimerDisplay }}
+                  </div>
+                  <div
+                    class="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1"
+                  >
+                    Duration
+                  </div>
+                </div>
+
+                <!-- 中间：任务详情 -->
+                <div class="flex-1 min-w-0 max-w-xl text-center sm:text-left">
+                  <div
+                    class="flex items-center justify-center sm:justify-start gap-2 mb-2"
+                  >
+                    <span
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >Now Doing</span
+                    >
+                    <span
+                      v-if="basketTask.tags"
+                      v-for="tag in basketTask.tags.split(',')"
+                      :key="tag"
+                      class="text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100 font-bold"
+                      >#{{ tag.trim() }}</span
+                    >
+                  </div>
+                  <h2
+                    class="text-2xl sm:text-3xl font-bold text-slate-800 leading-tight mb-2 line-clamp-2"
+                  >
+                    {{ basketTask.title }}
+                  </h2>
+                  <p
+                    v-if="basketTask.description"
+                    class="text-sm text-slate-500 italic line-clamp-2"
+                  >
+                    "{{ basketTask.description }}"
+                  </p>
+                </div>
+              </div>
+
+              <!-- 底部按钮 -->
+              <div
+                class="flex gap-3 mt-6 sm:mt-0 sm:absolute sm:bottom-0 sm:right-0"
+              >
+                <button
+                  @click="completeTask(basketTask)"
+                  class="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-slate-700 shadow-lg shadow-slate-300 hover:-translate-y-0.5 transition-all active:scale-95 flex items-center gap-2 text-sm"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    ></path>
+                  </svg>
+                  完成
+                </button>
+                <button
+                  @click="pauseTask(basketTask)"
+                  class="bg-white text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95 text-sm"
+                  title="暂停/放回"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 9v6m4-6v6"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 篮子为空 -->
+            <div v-else class="flex items-center gap-4 text-slate-400">
+              <div class="p-3 bg-white/50 rounded-full">
+                <svg
+                  class="w-6 h-6 text-indigo-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                  ></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <h3 class="text-base font-bold text-slate-600">
+                  等待任务中...
+                </h3>
+                <p class="text-xs opacity-70">点击下方任务以开始计时</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: 四象限矩阵 -->
+        <section
+          class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto pr-1 pb-2"
+        >
+          <div
+            v-for="q in quadrants"
+            :key="q.id"
+            class="flex flex-col rounded-2xl border shadow-sm h-full min-h-[200px]"
+            :class="q.bgClass"
+          >
+            <!-- 象限头 -->
+            <div
+              class="px-4 py-3 border-b border-black/5 flex justify-between items-center bg-white/40 backdrop-blur-sm rounded-t-2xl sticky top-0 z-10"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-lg">{{ q.icon }}</span>
+                <span class="font-bold text-slate-700 text-sm"
+                  >{{ q.name }}</span
+                >
+              </div>
+              <button
+                @click="openAddModal(q.id)"
+                class="w-6 h-6 hover:bg-white rounded flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 任务列表 -->
+            <div class="flex-1 p-3 overflow-y-auto space-y-2">
+              <div
+                v-for="task in getTasksByQuadrant(q.id)"
+                :key="task.id"
+                @click="moveToBasket(task)"
+                class="bg-white p-3 rounded-xl shadow-sm border border-black/5 cursor-pointer group hover:scale-[1.01] transition-transform relative"
+              >
+                <!-- 删除按钮 (Hover显示) -->
+                <button
+                  @click.stop="deleteTask(task.id)"
+                  class="absolute top-2 right-2 p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-20"
+                  title="删除任务"
+                >
+                  <svg
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    ></path>
+                  </svg>
+                </button>
+
+                <div v-if="task.tags" class="flex flex-wrap gap-1 mb-1.5">
+                  <span
+                    v-for="tag in task.tags.split(',')"
+                    :key="tag"
+                    class="tag-badge bg-slate-100 text-slate-500 border border-slate-200"
+                    >{{ tag.trim() }}</span
+                  >
+                </div>
+
+                <div
+                  class="font-medium text-slate-700 text-sm pr-6 leading-snug"
+                >
+                  {{ task.title }}
+                </div>
+
+                <div
+                  class="mt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-50 pt-2"
+                >
+                  <div class="flex items-center gap-2">
+                    <span
+                      v-if="task.duration_seconds > 0"
+                      class="flex items-center gap-1 font-mono text-indigo-400 font-bold"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {{ formatDuration(task.duration_seconds) }}
+                    </span>
+                    <span v-if="task.description" title="有备注"
+                      ><svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 6h16M4 12h16M4 18h7"
+                        ></path></svg
+                    ></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ================= MODALS ================= -->
+
+      <!-- 统计面板 Modal -->
+      <div
+        v-if="showStats"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
+          @click="showStats = false"
+        ></div>
+        <div
+          class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl relative z-10 overflow-hidden animate-fade-in"
+        >
+          <div
+            class="p-6 sm:p-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center"
+          >
+            <div>
+              <h2 class="text-2xl font-bold text-slate-800">数据洞察</h2>
+              <p
+                class="text-xs text-slate-500 font-medium uppercase tracking-wide"
+              >
+                Performance Overview
+              </p>
+            </div>
+            <button
+              @click="showStats = false"
+              class="text-slate-400 hover:text-slate-600 p-2 bg-white rounded-full shadow-sm hover:shadow"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 今日统计 -->
+            <div
+              class="stat-card-today rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 relative overflow-hidden group"
+            >
+              <div
+                class="absolute top-0 right-0 p-4 opacity-20 transform group-hover:scale-110 transition-transform"
+              >
+                <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                    clip-rule="evenodd"
+                  ></path>
+                </svg>
+              </div>
+              <h3
+                class="text-indigo-100 font-bold uppercase tracking-wider text-xs mb-4"
+              >
+                Today's Focus
+              </h3>
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-5xl font-mono font-bold"
+                  >{{ formatHours(todayStats.duration) }}</span
+                >
+                <span class="text-sm font-medium opacity-80">小时</span>
+              </div>
+              <div
+                class="flex items-center gap-2 mt-4 text-sm font-medium bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm"
+              >
+                <span>✅ 完成 {{ todayStats.count }} 个任务</span>
+              </div>
+            </div>
+
+            <!-- 本周统计 -->
+            <div
+              class="stat-card-week rounded-2xl p-6 text-slate-800 shadow-lg shadow-sky-100 relative overflow-hidden group"
+            >
+              <div
+                class="absolute top-0 right-0 p-4 opacity-10 transform group-hover:scale-110 transition-transform"
+              >
+                <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"
+                  ></path>
+                </svg>
+              </div>
+              <h3
+                class="text-slate-500 font-bold uppercase tracking-wider text-xs mb-4"
+              >
+                This Week
+              </h3>
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-5xl font-mono font-bold text-slate-800"
+                  >{{ formatHours(weekStats.duration) }}</span
+                >
+                <span class="text-sm font-medium text-slate-500">小时</span>
+              </div>
+              <div
+                class="flex items-center gap-2 mt-4 text-sm font-medium bg-white/40 w-fit px-3 py-1 rounded-full backdrop-blur-sm text-slate-600"
+              >
+                <span>🔥 完成 {{ weekStats.count }} 个任务</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-8 pb-8 text-center text-xs text-slate-400">
+            *
+            统计数据基于已完成（Done）状态的任务计算。保持专注，让每一分钟都有价值。
+          </div>
+        </div>
+      </div>
+
+      <!-- 历史侧滑栏 -->
+      <div v-if="showHistory" class="fixed inset-0 z-[60] flex justify-end">
+        <div
+          class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
+          @click="showHistory = false"
+        ></div>
+        <div
+          class="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right"
+        >
+          <div
+            class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50"
+          >
+            <h2 class="font-bold text-lg text-slate-800">完成历史</h2>
+            <button
+              @click="showHistory = false"
+              class="text-slate-400 hover:text-slate-600"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-6 space-y-8 bg-white">
+            <div v-for="(group, date) in groupedCompletedTasks" :key="date">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="h-px flex-1 bg-slate-100"></span>
+                <span
+                  class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+                  >{{ date }}</span
+                >
+                <span class="h-px flex-1 bg-slate-100"></span>
+              </div>
+              <div class="space-y-3">
+                <div
+                  v-for="task in group"
+                  :key="task.id"
+                  class="flex justify-between items-start group"
+                >
+                  <div class="flex-1">
+                    <div
+                      class="text-sm text-slate-600 line-through decoration-slate-300"
+                    >
+                      {{ task.title }}
+                    </div>
+                    <div class="flex gap-2 mt-1">
+                      <span
+                        class="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-mono"
+                        >{{ formatDuration(task.duration_seconds) }}</span
+                      >
+                    </div>
+                  </div>
+                  <button
+                    @click="deleteTask(task.id)"
+                    class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新建任务 Modal -->
+      <div
+        v-if="showModal"
+        class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+          @click="showModal = false"
+        ></div>
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden animate-fade-in"
+        >
+          <div
+            class="h-1.5 w-full"
+            :class="getQuadrantColor(newTask.quadrant)"
+          ></div>
+          <div class="p-6 sm:p-8">
+            <h3 class="text-xl font-bold text-slate-800 mb-6">
+              添加任务至
+              <span :class="getQuadrantTextColor(newTask.quadrant)"
+                >{{ getQuadrantName(newTask.quadrant) }}</span
+              >
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label
+                  class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
+                  >标题</label
+                >
+                <input
+                  v-model="newTask.title"
+                  @keyup.enter="addTask"
+                  type="text"
+                  placeholder="核心目标是什么？"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-lg focus:ring-2 focus:ring-slate-800 outline-none transition-all placeholder-slate-300"
+                  autofocus
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
+                  >备注</label
+                >
+                <textarea
+                  v-model="newTask.description"
+                  rows="2"
+                  placeholder="细节描述..."
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-slate-800 outline-none resize-none"
+                ></textarea>
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
+                  >标签</label
+                >
+                <input
+                  v-model="newTask.tags"
+                  type="text"
+                  placeholder="Design, Urgent..."
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-slate-800 outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
+                  >更改象限</label
+                >
+                <div class="flex gap-2">
+                  <button
+                    v-for="q in quadrants"
+                    :key="q.id"
+                    @click="newTask.quadrant = q.id"
+                    class="flex-1 py-2 rounded-lg text-xs font-bold border transition-all"
+                    :class="newTask.quadrant === q.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'"
+                  >
+                    Q{{ q.id }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-8">
+              <button
+                @click="showModal = false"
+                class="px-5 py-2 text-slate-500 hover:bg-slate-100 rounded-xl text-sm font-bold"
+              >
+                取消
+              </button>
+              <button
+                @click="addTask"
+                class="px-8 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 shadow-lg text-sm font-bold"
+              >
+                添加
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+      dayjs.locale("zh-cn"); // 设置中文
+
+      // ===========================================
+      // TODO: 配置 Supabase
+      // ===========================================
+      const SUPABASE_URL = "https://xmbdhsiopgklunsplimh.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "sb_publishable_Z0q1-9gRfvRsl_U5W9oPmQ_aWePMBiF";
+      // ===========================================
+
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      createApp({
+        setup() {
+          const tasks = ref([]);
+          const loading = ref(false);
+          const showModal = ref(false);
+          const showHistory = ref(false);
+          const showStats = ref(false);
+          const newTask = ref({
+            title: "",
+            description: "",
+            tags: "",
+            quadrant: 1,
+          });
+          const now = ref(dayjs());
+          let timerInterval;
+
+          const quadrants = [
+            { id: 1, name: "重要且紧急", bgClass: "q1-bg", icon: "🔥" },
+            { id: 2, name: "重要不紧急", bgClass: "q2-bg", icon: "🚀" },
+            { id: 3, name: "紧急不重要", bgClass: "q3-bg", icon: "⚡" },
+            { id: 4, name: "不急不重要", bgClass: "q4-bg", icon: "☕" },
+          ];
+
+          onMounted(() => {
+            fetchTasks();
+            timerInterval = setInterval(() => {
+              now.value = dayjs();
+            }, 1000);
+          });
+          onUnmounted(() => clearInterval(timerInterval));
+
+          // 获取任务
+          const fetchTasks = async () => {
+            loading.value = true;
+            const { data } = await client
+              .from("tasks")
+              .select("*")
+              .order("created_at", { ascending: false });
+            if (data) tasks.value = data;
+            loading.value = false;
+          };
+
+          // 计算属性
+          const timeDisplay = computed(() => ({
+            time: now.value.format("HH:mm:ss"),
+            date: now.value.format("YYYY-MM-DD"),
+            day: now.value.format("dddd"),
+          }));
+
+          const getTasksByQuadrant = (q) =>
+            tasks.value.filter((t) => t.quadrant === q && t.status === "todo");
+          const basketTask = computed(() =>
+            tasks.value.find((t) => t.status === "in_basket")
+          );
+
+          const currentTimerDisplay = computed(() => {
+            if (!basketTask.value) return "00:00:00";
+            const t = basketTask.value;
+            let current = 0;
+            if (t.start_time)
+              current = now.value.diff(dayjs(t.start_time), "second");
+            return formatDuration(
+              (t.duration_seconds || 0) + (current > 0 ? current : 0)
+            );
+          });
+
+          // 统计逻辑
+          const completedTasks = computed(() =>
+            tasks.value.filter((t) => t.status === "done")
+          );
+
+          const todayStats = computed(() => {
+            const today = completedTasks.value.filter((t) =>
+              dayjs(t.completed_at).isSame(dayjs(), "day")
+            );
+            const duration = today.reduce(
+              (acc, t) => acc + (t.duration_seconds || 0),
+              0
+            );
+            return { count: today.length, duration: duration };
+          });
+
+          const weekStats = computed(() => {
+            // dayjs 默认周日为第一天，这里简化逻辑，只要是本周即可
+            const startOfWeek = dayjs().startOf("week");
+            const week = completedTasks.value.filter((t) =>
+              dayjs(t.completed_at).isAfter(startOfWeek)
+            );
+            const duration = week.reduce(
+              (acc, t) => acc + (t.duration_seconds || 0),
+              0
+            );
+            return { count: week.length, duration: duration };
+          });
+
+          const groupedCompletedTasks = computed(() => {
+            const sorted = [...completedTasks.value].sort(
+              (a, b) => new Date(b.completed_at) - new Date(a.completed_at)
+            );
+            const groups = {};
+            sorted.forEach((task) => {
+              const dateStr = dayjs(task.completed_at).format("YYYY-MM-DD");
+              const label =
+                dateStr === dayjs().format("YYYY-MM-DD") ? "今天" : dateStr;
+              if (!groups[label]) groups[label] = [];
+              groups[label].push(task);
+            });
+            return groups;
+          });
+
+          // 辅助函数
+          const formatDuration = (s) => {
+            if (!s) return "00:00";
+            const h = Math.floor(s / 3600),
+              m = Math.floor((s % 3600) / 60),
+              sec = s % 60;
+            return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+          };
+          const formatHours = (s) => (s / 3600).toFixed(1);
+          const p = (n) => n.toString().padStart(2, "0");
+          const getQuadrantName = (id) =>
+            quadrants.find((q) => q.id === id)?.name;
+          const getQuadrantColor = (id) =>
+            ({
+              1: "bg-red-400",
+              2: "bg-blue-400",
+              3: "bg-amber-400",
+              4: "bg-slate-400",
+            }[id]);
+          const getQuadrantTextColor = (id) =>
+            ({
+              1: "text-red-500",
+              2: "text-blue-500",
+              3: "text-amber-600",
+              4: "text-slate-500",
+            }[id]);
+
+          // 操作逻辑
+          const openAddModal = (q) => {
+            newTask.value = {
+              title: "",
+              description: "",
+              tags: "",
+              quadrant: q,
+            };
+            showModal.value = true;
+          };
+
+          const addTask = async () => {
+            if (!newTask.value.title.trim()) return;
+            const temp = { ...newTask.value, status: "todo" };
+            const optimisticId = Date.now();
+            tasks.value.unshift({
+              ...temp,
+              id: optimisticId,
+              created_at: new Date(),
+            });
+            showModal.value = false;
+            const { data } = await client.from("tasks").insert([temp]).select();
+            if (data) {
+              const idx = tasks.value.findIndex((t) => t.id === optimisticId);
+              if (idx !== -1) tasks.value[idx] = data[0];
+            }
+          };
+
+          const moveToBasket = async (task) => {
+            if (basketTask.value)
+              return alert("请先完成或暂停当前专注的任务！");
+            task.status = "in_basket";
+            task.start_time = new Date().toISOString();
+            await client
+              .from("tasks")
+              .update({
+                status: "in_basket",
+                start_time: new Date().toISOString(),
+              })
+              .eq("id", task.id);
+          };
+
+          const pauseTask = async (task) => {
+            const session = dayjs().diff(dayjs(task.start_time), "second");
+            const newTotal = (task.duration_seconds || 0) + session;
+            task.status = "todo";
+            task.duration_seconds = newTotal;
+            task.start_time = null;
+            await client
+              .from("tasks")
+              .update({
+                status: "todo",
+                duration_seconds: newTotal,
+                start_time: null,
+              })
+              .eq("id", task.id);
+          };
+
+          const completeTask = async (task) => {
+            const session = task.start_time
+              ? dayjs().diff(dayjs(task.start_time), "second")
+              : 0;
+            const newTotal = (task.duration_seconds || 0) + session;
+            task.status = "done";
+            task.duration_seconds = newTotal;
+            task.completed_at = new Date().toISOString();
+            task.start_time = null;
+            await client
+              .from("tasks")
+              .update({
+                status: "done",
+                duration_seconds: newTotal,
+                completed_at: new Date().toISOString(),
+                start_time: null,
+              })
+              .eq("id", task.id);
+          };
+
+          const deleteTask = async (id) => {
+            if (!confirm("确定删除此任务?")) return;
+            tasks.value = tasks.value.filter((t) => t.id !== id);
+            await client.from("tasks").delete().eq("id", id);
+          };
+
+          return {
+            tasks,
+            loading,
+            showModal,
+            showHistory,
+            showStats,
+            newTask,
+            quadrants,
+            basketTask,
+            groupedCompletedTasks,
+            currentTimerDisplay,
+            timeDisplay,
+            todayStats,
+            weekStats,
+            getTasksByQuadrant,
+            openAddModal,
+            getQuadrantName,
+            getQuadrantColor,
+            getQuadrantTextColor,
+            addTask,
+            moveToBasket,
+            pauseTask,
+            completeTask,
+            deleteTask,
+            formatDuration,
+            formatHours,
+          };
+        },
+      }).mount("#app");
+    </script>
+
+    <style>
+      .animate-slide-in-right {
+        animation: slideInRight 0.3s ease-out forwards;
+      }
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </body>
+</html>
