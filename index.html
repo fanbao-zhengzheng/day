@@ -182,16 +182,12 @@
             >
           </div>
         </div>
-        <!-- 在 header 里加这个链接 -->
-        <a
-          href="clock.html"
-          class="p-2 text-indigo-500 hover:bg-indigo-50 rounded"
-        >
-          去时钟页 ->
-        </a>
 
-        <div class="flex items-center gap-6">
-          <div class="hidden sm:flex flex-col items-end mr-2">
+        <div class="flex items-center gap-3 sm:gap-4">
+          <!-- 时间显示 (大屏显示) -->
+          <div
+            class="hidden sm:flex flex-col items-end mr-4 border-r border-slate-200 pr-6"
+          >
             <span
               class="font-mono text-xl font-bold text-slate-700 leading-none tracking-tight"
               >{{ timeDisplay.time }}</span
@@ -201,45 +197,87 @@
               >{{ timeDisplay.date }} · {{ timeDisplay.day }}</span
             >
           </div>
-          <button
-            @click="showStats = true"
-            class="group relative p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              ></path>
-            </svg>
-          </button>
-          <button
-            @click="openCalendar"
-            class="p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              ></path>
-            </svg>
-          </button>
+
+          <!-- 工具栏组 -->
           <div
-            class="w-2 h-2 rounded-full ring-2 ring-white/50"
+            class="flex items-center gap-2 bg-white/50 p-1 rounded-xl border border-white/60 shadow-sm"
+          >
+            <!-- 统计按钮 -->
+            <button
+              @click="showStats = true"
+              class="relative p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-indigo-600 group"
+              title="数据洞察"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+              <span
+                v-if="todayStats.count > 0"
+                class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full border border-white"
+              ></span>
+            </button>
+
+            <!-- 日历按钮 -->
+            <button
+              @click="openCalendar"
+              class="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-slate-400 hover:text-indigo-600"
+              title="成就日历"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- 分割线 -->
+            <div class="w-px h-4 bg-slate-200 mx-1"></div>
+
+            <!-- 禅模式 (时钟页) 入口 -->
+            <a
+              href="clock.html"
+              class="p-2 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 text-slate-400 transition-all flex items-center gap-2"
+              title="进入禅模式 (时钟屏保)"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                ></path>
+              </svg>
+            </a>
+          </div>
+
+          <!-- 状态点 -->
+          <div
+            class="w-2.5 h-2.5 rounded-full ring-2 ring-white/50 ml-2"
             :class="loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'"
+            title="数据同步状态"
           ></div>
         </div>
       </header>
