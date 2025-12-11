@@ -11,7 +11,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/zh-cn.min.js"></script>
-    <!-- 引入 IsBetween 插件用于日历计算 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/plugin/isBetween.min.js"></script>
 
     <!-- 字体 -->
@@ -230,7 +229,7 @@
             ></span>
           </button>
 
-          <!-- Calendar Button (Replaces History) -->
+          <!-- Calendar Button -->
           <button
             @click="openCalendar"
             class="p-2 rounded-lg hover:bg-white hover:shadow-md transition-all text-slate-500 hover:text-indigo-600"
@@ -531,7 +530,7 @@
 
       <!-- ================= MODALS ================= -->
 
-      <!-- 日历 Modal -->
+      <!-- 日历 Modal (修正布局版) -->
       <div
         v-if="showCalendar"
         class="fixed inset-0 z-[75] flex items-center justify-center p-4"
@@ -543,18 +542,69 @@
         <div
           class="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[85vh] animate-fade-in"
         >
-          <!-- Calendar Header -->
+          <!-- Calendar Header: 布局已更新 -->
           <div
-            class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50"
+            class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50"
           >
             <div>
               <h2 class="text-xl font-bold text-slate-800">成就日历</h2>
               <p class="text-xs text-slate-500 font-medium">查看过往的辉煌</p>
             </div>
+
             <div class="flex items-center gap-4">
+              <!-- 月份切换器 (加了背景框，防止与关闭按钮冲突) -->
+              <div
+                class="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm"
+              >
+                <button
+                  @click="changeMonth(-1)"
+                  class="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 19l-7-7 7-7"
+                    ></path>
+                  </svg>
+                </button>
+                <span
+                  class="text-sm font-bold text-slate-700 min-w-[6rem] text-center select-none"
+                  >{{ calendarTitle }}</span
+                >
+                <button
+                  @click="changeMonth(1)"
+                  class="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- 竖分割线 -->
+              <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+
+              <!-- 关闭按钮 (已移入 Flex 布局) -->
               <button
-                @click="changeMonth(-1)"
-                class="p-1 hover:bg-slate-200 rounded text-slate-500"
+                @click="showCalendar = false"
+                class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
               >
                 <svg
                   class="w-5 h-5"
@@ -566,28 +616,7 @@
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M15 19l-7-7 7-7"
-                  ></path>
-                </svg>
-              </button>
-              <span class="text-sm font-bold text-slate-700 w-24 text-center"
-                >{{ calendarTitle }}</span
-              >
-              <button
-                @click="changeMonth(1)"
-                class="p-1 hover:bg-slate-200 rounded text-slate-500"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5l7 7-7 7"
+                    d="M6 18L18 6M6 6l12 12"
                   ></path>
                 </svg>
               </button>
@@ -695,26 +724,6 @@
               这天没有完成任何任务
             </div>
           </div>
-
-          <!-- Close Button -->
-          <button
-            @click="showCalendar = false"
-            class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600"
-          >
-            <svg
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -1103,7 +1112,6 @@
             const h = Math.floor(s / 3600),
               m = Math.floor((s % 3600) / 60),
               sec = s % 60;
-            // 确保总是显示小时
             return `${p(h)}:${p(m)}:${p(sec)}`;
           };
           const formatHours = (s) => (s / 3600).toFixed(1);
